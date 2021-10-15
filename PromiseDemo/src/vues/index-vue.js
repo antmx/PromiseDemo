@@ -143,17 +143,70 @@ var indexVue = new Vue({
                 });
         },
 
-        selectPolicyInfoWithCallbacks: function (policyId) {
+        selectCustomerInfoWithCallbacks: function (customerId) {
             debugger;
-            // Shed load of callback functions!
+
+            // Gather Customer, Policy, Claim, ClaimStatus and Fulfilment data using shed load of callback functions!
+
+            var customerData = {};
+
+            const self = this;
+
+            this.idxDbSvc.selectWithCallback(
+                "Customer",
+                { filterFn: (c) => c.CustomerID == customerId, returnFirstItemOnly: true },
+                customerCallback);
+
+            function customerCallback(customer) {
+                console.log(customer.CustomerRef);
+
+                customerData = customer;
+
+                self.idxDbSvc.selectWithCallback(
+                    "Policy",
+                    { filterFn: (p) => p.CustomerID == customer.CustomerID },
+                    policyCallback
+                )
+            }
+
+            function policyCallback(policies) {
+
+                customerData.policies = policies;
+
+                var policyIDs = policies.map(p => p.PolicyID);
+
+                self.idxDbSvc.selectWithCallback(
+                    "Claim",
+                    { filterFn: (c) => policyIDs.indexOf(c.PolicyID) > -1 },
+                    claimCallback
+                )
+            }
+
+            function claimCallback(claims) {
+
+                customerData.claims = claims;
+
+                var claimStatusIDs = claims.map(c => c.ClaimStatusID);
+
+                self.idxDbSvc.selectWithCallback(
+                    "ClaimStatus",
+                    { filterFn: (cs) => claimStatusIDs.indexOf(cs.ClaimStatusID) > -1 },
+                    claimStatusCallback
+                )
+            }
+
+            function claimStatusCallback(claimStatuses) {
+
+                //for(var idx)
+            }
         },
 
-        selectPolicyInfoWithNestedCallbacks: function (policyId) {
+        selectCustomerInfoWithNestedCallbacks: function (policyId) {
             debugger;
             // Pyramid of doom!
         },
 
-        selectPolicyInfoWithPromises: function (policyId) {
+        selectCustomerInfoWithPromises: function (policyId) {
             debugger;
         },
 
@@ -182,35 +235,16 @@ var indexVue = new Vue({
             this.selectedPolicy = {};
         },
 
-        listPolicies: function () {
+        listCustomers: function () {
 
             const self = this;
 
-            this.idxDbSvc.select("Policy")
-                .then(function (policies) {
-                    self.storeData = policies;
+            this.idxDbSvc.select("Customer")
+                .then(function (customers) {
+                    self.storeData = customers;
                 });
 
-        },
-
-        //populateStore: function () {
-
-        //    var dataToStore;
-
-        //    for (var idx = 0; idx < this.dummyData.length; idx++) {
-        //        if (this.dummyData[idx][0] == this.activeStoreName) {
-        //            dataToStore = [this.dummyData[idx]];
-        //            break;
-        //        }
-        //    }
-
-        //    if (dataToStore == null) {
-        //        console.error("Unexpected store name: " + this.activeStoreName);
-        //        return;
-        //    }
-
-        //    this.idxDbSvc.storeMany(dataToStore);
-        //}
+        }
     },
 
     mounted: function () {

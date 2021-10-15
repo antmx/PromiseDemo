@@ -24,7 +24,7 @@
 
             <div class="col-2">
                 <button id="btnCreateDb" class="btn btn-sm btn-success mb-1 w-100" v-on:click="createDb" v-bind:disabled="dbCreated">Create database</button>
-                <button id="btnPolicies" class="btn btn-sm btn-secondary mb-1 w-100" v-on:click="listPolicies" :disabled="!dbCreated">List policies</button>
+                <button id="btnCustomers" class="btn btn-sm btn-secondary mb-1 w-100" v-on:click="listCustomers" :disabled="!dbCreated">List customers</button>
                 <button id="btnDeleteDb" class="btn btn-sm btn-danger mb-1 w-100" v-on:click="deleteDb" :disabled="!dbCreated">Delete database</button>
             </div>
 
@@ -41,9 +41,9 @@
                         <div class="row">
                             <div class="col-sm-9">{{ row }}</div>
                             <div class="col-sm-3 text-end">
-                                <button class="btn btn-xs btn-secondary mb-1" v-on:click="selectPolicyInfoWithCallbacks(row.PolicyID)">Details (callbacks)</button><br />
-                                <button class="btn btn-xs btn-secondary mb-1" v-on:click="selectPolicyInfoWithNestedCallbacks(row.PolicyID)">Details (nested callbacks / POD)</button><br />
-                                <button class="btn btn-xs btn-secondary" v-on:click="selectPolicyInfoWithPromises(row.PolicyID)">Details (chained promises)</button>
+                                <button class="btn btn-xs btn-secondary mb-1" v-on:click="selectCustomerInfoWithCallbacks(row.CustomerID)">Details (callbacks)</button><br />
+                                <button class="btn btn-xs btn-secondary mb-1" v-on:click="selectCustomerInfoWithNestedCallbacks(row.CustomerID)">Details (nested callbacks / POD)</button><br />
+                                <button class="btn btn-xs btn-secondary" v-on:click="selectCustomerInfoWithPromises(row.CustomerID)">Details (chained promises)</button>
                             </div>
                         </div>
                     </li>
