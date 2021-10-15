@@ -1,0 +1,69 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Promise Demo</title>
+
+    <script src="lib/vuejs/vue.js"></script>
+    <script src="src/services/indexedDbSvc.js"></script>
+
+    <link href="lib/bootstrap/bootstrap.css" rel="stylesheet" />
+
+    <link rel="apple-touch-icon" sizes="180x180" href="img/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="img/favicon-16x16.png" />
+</head>
+<body>
+    <div class="container" id="root">
+
+        <h1>Promise Demo</h1>
+
+        <hr />
+
+        <div class="row">
+
+            <div class="col-2">
+                <button id="btnCreateDb" class="btn btn-sm btn-success mb-1 w-100" v-on:click="createDb" v-bind:disabled="dbCreated">Create database</button>
+                <button id="btnPolicies" class="btn btn-sm btn-secondary mb-1 w-100" v-on:click="listPolicies" :disabled="!dbCreated">List policies</button>
+                <button id="btnDeleteDb" class="btn btn-sm btn-danger mb-1 w-100" v-on:click="deleteDb" :disabled="!dbCreated">Delete database</button>
+            </div>
+
+            <div class="col-10">
+
+                <div class="list-group mb-1" v-if="storeNames.length > 0">
+                    <a href="#" class="list-group-item list-group-item-action" v-bind:class="{ active : activeStoreName == storeName }" v-for="storeName in storeNames" :key="storeName" v-on:click="clearSelectedItems(); listStoreData(storeName); activateStoreListElem(storeName)">
+                        {{ storeName }}
+                    </a>
+                </div>
+
+                <ul class="list-group mb-1" v-if="storeData.length > 0 || activeStoreName != null">
+                    <li class="list-group-item" v-for="row in storeData">
+                        <div class="row">
+                            <div class="col-sm-9">{{ row }}</div>
+                            <div class="col-sm-3 text-end">
+                                <button class="btn btn-xs btn-secondary mb-1" v-on:click="selectPolicyInfoWithCallbacks(row.PolicyID)">Details (callbacks)</button><br />
+                                <button class="btn btn-xs btn-secondary mb-1" v-on:click="selectPolicyInfoWithNestedCallbacks(row.PolicyID)">Details (nested callbacks / POD)</button><br />
+                                <button class="btn btn-xs btn-secondary" v-on:click="selectPolicyInfoWithPromises(row.PolicyID)">Details (chained promises)</button>
+                            </div>
+                        </div>
+                    </li>
+                </ul>
+
+                <div>
+                    <customer-store-item-editor v-if="selectedCustomer.CustomerID >= 0" xv-bind:customer-id="selectedCustomer.CustomerID" xv-bind:customer-name="selectedCustomer.CustomerName" v-bind:customer="selectedCustomer" />
+                </div>
+
+                <div>
+                    <policy-store-item-editor v-if="selectedPolicy.PolicyID >= 0" v-bind:policy="selectedPolicy" />
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <script src="src/vues/index-vue.js"></script>
+
+</body>
+</html>
