@@ -337,6 +337,20 @@ var indexedDbSvc = (function () {
     };
 
     /**
+     * 
+     * @param {string} storeName
+     * @param {selectInnerJoinOnArrayOptions} options
+     * @param {Function} callbackFn
+     */
+    indexedDbSvc.prototype.selectInnerJoinOnArrayWithCallback = function (storeName, options, callbackFn) {
+
+        this.selectInnerJoinOnArray(storeName, options)
+            .then(function (results) {
+                callbackFn.call(null, results);
+            });
+    };
+
+    /**
      * Performs a data query, joining the results to the provided array and returns database items that have a matching item in the array. Returns a Promise which is resolved when the async operation completes.
      * @param {string} storeName Name of the IndexedDB store (table) to query.
      * @param {selectInnerJoinOnArrayOptions} options Set of options for controlling the results.

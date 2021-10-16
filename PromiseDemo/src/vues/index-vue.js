@@ -1,4 +1,5 @@
-﻿/// <reference path="../services/indexeddbsvc.js" />
+﻿/// <reference path="../../lib/indexedDbSvc/indexedDbSvc.js" />
+/// <reference path="../../lib/linqjs/linqcore.js" />
 
 /** Vue for index page  */
 var indexVue = new Vue({
@@ -15,7 +16,7 @@ var indexVue = new Vue({
                 indexes: [
                     { name: "CustomerID", isUnique: true },
                     { name: "CustomerRef", isUnique: true },
-                    { name: "Name", isUnique: false },
+                    { name: "CustomerName", isUnique: false },
                     { name: "DOB", isUnique: false }
                 ]
             },
@@ -51,14 +52,14 @@ var indexVue = new Vue({
                 storeName: "ClaimStatus",
                 indexes: [
                     { name: "ClaimStatusID", isUnique: true },
-                    { name: "Name", isUnique: true }
+                    { name: "ClaimStatusName", isUnique: true }
                 ]
             },
             {
                 storeName: "Supplier",
                 indexes: [
                     { name: "SupplierID", isUnique: true },
-                    { name: "Name", isUnique: true }
+                    { name: "SupplierName", isUnique: true }
                 ]
             }
         ],
@@ -67,11 +68,11 @@ var indexVue = new Vue({
         storeData: [],
         dummyData: [
             ["Customer", [
-                { CustomerID: 1, CustomerRef: "CUST001", Name: "A Test" },
-                { CustomerID: 2, CustomerRef: "CUST002", Name: "B Test" },
-                { CustomerID: 3, CustomerRef: "CUST003", Name: "C Test" },
-                { CustomerID: 4, CustomerRef: "CUST004", Name: "D Test" },
-                { CustomerID: 5, CustomerRef: "CUST005", Name: "E Test" }
+                { CustomerID: 1, CustomerRef: "CUST001", CustomerName: "A Test" },
+                { CustomerID: 2, CustomerRef: "CUST002", CustomerName: "B Test" },
+                { CustomerID: 3, CustomerRef: "CUST003", CustomerName: "C Test" },
+                { CustomerID: 4, CustomerRef: "CUST004", CustomerName: "D Test" },
+                { CustomerID: 5, CustomerRef: "CUST005", CustomerName: "E Test" }
             ]],
             ["Policy", [
                 { PolicyID: 1, PolicyRef: "POL001", CustomerID: 1 },
@@ -88,20 +89,20 @@ var indexVue = new Vue({
                 { ClaimID: 4, ClaimRef: "CL004", PolicyID: 1, ClaimStatusID: 2 }
             ]],
             ["Fulfilment", [
-                { FulfilmentID: 1, FulfilmentRef: "FF001", ClaimID: 1 },
-                { FulfilmentID: 2, FulfilmentRef: "FF002", ClaimID: 2 },
-                { FulfilmentID: 3, FulfilmentRef: "FF003", ClaimID: 3 },
-                { FulfilmentID: 6, FulfilmentRef: "FF006", ClaimID: 1 }
+                { FulfilmentID: 1, FulfilmentRef: "FF001", ClaimID: 1, SupplierID: 1 },
+                { FulfilmentID: 2, FulfilmentRef: "FF002", ClaimID: 2, SupplierID: 2 },
+                { FulfilmentID: 3, FulfilmentRef: "FF003", ClaimID: 3, SupplierID: 3 },
+                { FulfilmentID: 6, FulfilmentRef: "FF006", ClaimID: 1, SupplierID: 2 }
             ]],
             ["ClaimStatus", [
-                { ClaimStatusID: 1, Name: "New" },
-                { ClaimStatusID: 2, Name: "In Progress" },
-                { ClaimStatusID: 3, Name: "Settled" }
+                { ClaimStatusID: 1, ClaimStatusName: "New" },
+                { ClaimStatusID: 2, ClaimStatusName: "In Progress" },
+                { ClaimStatusID: 3, ClaimStatusName: "Settled" }
             ]],
             ["Supplier", [
-                { SupplierID: 1, Name: "SmartLabs" },
-                { SupplierID: 2, Name: "Zalenza" },
-                { SupplierID: 3, Name: "CTDI" }
+                { SupplierID: 1, SupplierName: "SmartLabs" },
+                { SupplierID: 2, SupplierName: "Zalenza" },
+                { SupplierID: 3, SupplierName: "CTDI" }
             ]]
         ],
         selectedCustomer: {},
@@ -144,11 +145,15 @@ var indexVue = new Vue({
         },
 
         selectCustomerInfoWithCallbacks: function (customerId) {
-            debugger;
-
+            
             // Gather Customer, Policy, Claim, ClaimStatus and Fulfilment data using shed load of callback functions!
 
-            var customerData = {};
+            var customerSummary = {
+                customer: {},
+                policies: [],
+                claims: [],
+                fulfilments: []
+            };
 
             const self = this;
 
@@ -158,9 +163,8 @@ var indexVue = new Vue({
                 customerCallback);
 
             function customerCallback(customer) {
-                console.log(customer.CustomerRef);
 
-                customerData = customer;
+                customerSummary.customer = customer;
 
                 self.idxDbSvc.selectWithCallback(
                     "Policy",
@@ -171,7 +175,7 @@ var indexVue = new Vue({
 
             function policyCallback(policies) {
 
-                customerData.policies = policies;
+                customerSummary.policies = policies;
 
                 var policyIDs = policies.map(p => p.PolicyID);
 
@@ -184,21 +188,55 @@ var indexVue = new Vue({
 
             function claimCallback(claims) {
 
-                customerData.claims = claims;
+                customerSummary.claims = claims;
 
-                var claimStatusIDs = claims.map(c => c.ClaimStatusID);
+                /** @type {selectInnerJoinOnArrayOptions} */
+                var options = {
+                    dbField: "ClaimStatusID",
+                    joinArray: customerSummary.claims,
+                    arrayField: "ClaimStatusID"
+                };
+
+                self.idxDbSvc.selectInnerJoinOnArrayWithCallback("ClaimStatus", options, claimStatusCallback);
+            }
+
+            function claimStatusCallback(claimsWithClaimStatuses) {
+                                
+                customerSummary.claims = claimsWithClaimStatuses;
+
+                var claimIds = customerSummary.claims.map(c => c.ClaimID);
 
                 self.idxDbSvc.selectWithCallback(
-                    "ClaimStatus",
-                    { filterFn: (cs) => claimStatusIDs.indexOf(cs.ClaimStatusID) > -1 },
-                    claimStatusCallback
-                )
+                    "Fulfilment",
+                    { filterFn: f => claimIds.indexOf(f.ClaimID) > -1 },
+                    fulfilmentCallback
+                );
             }
 
-            function claimStatusCallback(claimStatuses) {
+            function fulfilmentCallback(fulfilments) {
 
-                //for(var idx)
+                customerSummary.fulfilments = fulfilments;
+
+                /** @type {selectInnerJoinOnArrayOptions} */
+                var options = {
+                    dbField: "SupplierID",
+                    joinArray: customerSummary.fulfilments,
+                    arrayField: "SupplierID"
+                };
+
+                self.idxDbSvc.selectInnerJoinOnArrayWithCallback("Supplier", options, supplierCallback);
+
             }
+
+            function supplierCallback(fulfilmentsWithSuppliers) {
+
+                customerSummary.fulfilments = fulfilmentsWithSuppliers;
+
+                var customerDataJsonString = JSON.stringify(customerSummary, null, 3);
+
+                console.log(customerDataJsonString);
+            }
+
         },
 
         selectCustomerInfoWithNestedCallbacks: function (policyId) {

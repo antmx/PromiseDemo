@@ -5,7 +5,8 @@
     <title>Promise Demo</title>
 
     <script src="lib/vuejs/vue.js"></script>
-    <script src="src/services/indexedDbSvc.js"></script>
+    <script src="lib/indexedDbSvc/indexedDbSvc.js"></script>
+    <script src="lib/linqJs/LinqAll.js"></script>
 
     <link href="lib/bootstrap/bootstrap.css" rel="stylesheet" />
 
@@ -29,12 +30,6 @@
             </div>
 
             <div class="col-10">
-
-                <div class="list-group mb-1" v-if="storeNames.length > 0">
-                    <a href="#" class="list-group-item list-group-item-action" v-bind:class="{ active : activeStoreName == storeName }" v-for="storeName in storeNames" :key="storeName" v-on:click="clearSelectedItems(); listStoreData(storeName); activateStoreListElem(storeName)">
-                        {{ storeName }}
-                    </a>
-                </div>
 
                 <ul class="list-group mb-1" v-if="storeData.length > 0 || activeStoreName != null">
                     <li class="list-group-item" v-for="row in storeData">
