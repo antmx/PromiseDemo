@@ -23,6 +23,8 @@
 
         <div class="row">
 
+            <div class="alert-danger" v-if="errorMsg != null">{{ errorMsg }}</div>
+
             <div class="col-2">
                 <button id="btnCreateDb" class="btn btn-sm btn-success mb-1 w-100" v-on:click="createDb" v-bind:disabled="dbCreated">Create database</button>
                 <button id="btnCustomers" class="btn btn-sm btn-secondary mb-1 w-100" v-on:click="listCustomers" :disabled="!dbCreated">List customers</button>
@@ -38,7 +40,8 @@
                             <div class="col-sm-3 text-end">
                                 <button class="btn btn-xs btn-secondary mb-1" v-on:click="selectCustomerInfoWithCallbacks(row.CustomerID)">Details (callbacks)</button><br />
                                 <button class="btn btn-xs btn-secondary mb-1" v-on:click="selectCustomerInfoWithNestedCallbacks(row.CustomerID)">Details (nested callbacks / POD)</button><br />
-                                <button class="btn btn-xs btn-secondary" v-on:click="selectCustomerInfoWithPromises(row.CustomerID)">Details (chained promises)</button>
+                                <button class="btn btn-xs btn-secondary mb-1" v-on:click="selectCustomerInfoWithPromises(row.CustomerID)">Details (chained promises)</button>
+                                <button class="btn btn-xs btn-secondary" v-on:click="selectCustomerInfoWithPromisesAsync(row.CustomerID)">Details (chained promises async)</button>
                             </div>
                         </div>
                     </li>
