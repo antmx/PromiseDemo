@@ -146,7 +146,7 @@ var indexVue = new Vue({
 
         selectCustomerInfoWithCallbacks: function (customerId) {
             
-            // Gather Customer, Policy, Claim, ClaimStatus and Fulfilment data using shed load of callback functions!
+            // Gather Customer, Policy, Claim, ClaimStatus and Fulfilment data using shed load of convoluted callback functions - callback hell!
 
             var customerSummary = {
                 customer: {},
@@ -166,11 +166,16 @@ var indexVue = new Vue({
 
                 customerSummary.customer = customer;
 
-                self.idxDbSvc.selectWithCallback(
-                    "Policy",
-                    { filterFn: (p) => p.CustomerID == customer.CustomerID },
-                    policyCallback
-                )
+                try {
+                    self.idxDbSvc.selectWithCallback(
+                        "Policy",
+                        { filterFn: (p) => p.CustomerID == customer.CustomerID },
+                        policyCallback
+                    )
+                } catch (e) {
+                    console.error(e);
+                }
+
             }
 
             function policyCallback(policies) {
@@ -239,9 +244,95 @@ var indexVue = new Vue({
 
         },
 
-        selectCustomerInfoWithNestedCallbacks: function (policyId) {
+        selectCustomerInfoWithNestedCallbacks: function (customerId) {
             debugger;
-            // Pyramid of doom!
+
+            // Gather Customer, Policy, Claim, ClaimStatus and Fulfilment data using shed load of nested callback functions - Pyramid of doom!
+
+            var customerSummary = {
+                customer: {},
+                policies: [],
+                claims: [],
+                fulfilments: []
+            };
+
+            const self = this;
+
+            //this.idxDbSvc.selectWithCallback(
+            //    "Customer",
+            //    { filterFn: (c) => c.CustomerID == customerId, returnFirstItemOnly: true },
+            //    customerCallback);
+
+            this.idxDbSvc.selectWithCallback(
+                "Customer",
+                { filterFn: (c) => c.CustomerID == customerId, returnFirstItemOnly: true },
+                function customerCallback (customer) {
+
+                    customerSummary.customer = customer;
+
+                    self.idxDbSvc.selectWithCallback(
+                        "Policy",
+                        { filterFn: (p) => p.CustomerID == customer.CustomerID },
+                        function policyCallback (policies) {
+
+                            customerSummary.policies = policies;
+
+                            var policyIDs = policies.map(p => p.PolicyID);
+
+                            self.idxDbSvc.selectWithCallback(
+                                "Claim",
+                                { filterFn: (c) => policyIDs.indexOf(c.PolicyID) > -1 },
+                                function claimCallback(claims) {
+
+                                    customerSummary.claims = claims;
+
+                                    /** @type {selectInnerJoinOnArrayOptions} */
+                                    var options = {
+                                        dbField: "ClaimStatusID",
+                                        joinArray: customerSummary.claims,
+                                        arrayField: "ClaimStatusID"
+                                    };
+
+                                    self.idxDbSvc.selectInnerJoinOnArrayWithCallback("ClaimStatus", options, function claimStatusCallback(claimsWithClaimStatuses) {
+
+                                        customerSummary.claims = claimsWithClaimStatuses;
+
+                                        var claimIds = customerSummary.claims.map(c => c.ClaimID);
+
+                                        self.idxDbSvc.selectWithCallback(
+                                            "Fulfilment",
+                                            { filterFn: f => claimIds.indexOf(f.ClaimID) > -1 },
+                                            function fulfilmentCallback(fulfilments) {
+
+                                                customerSummary.fulfilments = fulfilments;
+
+                                                /** @type {selectInnerJoinOnArrayOptions} */
+                                                var options = {
+                                                    dbField: "SupplierID",
+                                                    joinArray: customerSummary.fulfilments,
+                                                    arrayField: "SupplierID"
+                                                };
+
+                                                self.idxDbSvc.selectInnerJoinOnArrayWithCallback("Supplier", options, function supplierCallback(fulfilmentsWithSuppliers) {
+
+                                                    customerSummary.fulfilments = fulfilmentsWithSuppliers;
+
+                                                    var customerDataJsonString = JSON.stringify(customerSummary, null, 3);
+
+                                                    console.log(customerDataJsonString);
+                                                });
+
+                                            }
+                                        );
+                                    });
+                                }
+                            )
+
+                        }
+                    )
+
+                });
+
         },
 
         selectCustomerInfoWithPromises: function (policyId) {
