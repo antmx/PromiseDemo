@@ -7,71 +7,8 @@
 */
 
 /**
-    * Options for select function.
-    * @typedef {Object} selectOptions
-    * @property { string } indexName - Optional. Name of index to search in.
-    * @property { IDBKeyRange } keyRange - Optional. A key range can be a single value or a range with upper and lower bounds or endpoints. If the key range has both upper and lower bounds, then it is bounded; if it has no bounds, it is unbounded. A bounded key range can either be open (the endpoints are excluded) or closed (the endpoints are included).
-    * @property { Function } filterFn - Optional. A function to filter items in the store being queried. Should be something like: function (elementOfArray[, indexInArray]) { return elementOfArray.pr_Deleted == "False"; })
-    * @property { Function } transformFn - Optional.  A function to transform each item before adding it to the result array. Pass null to return the original item. Should be something like: function (valueOfElement) { return new Genus.PriceMatrixRule(valueOfElement); }
-    * @property { Function|string|ArrayLike<string>|boolean } [orderBy] Either a function to sort items, a string naming 1 field to sort by, an array of strings naming multiple fields to sort by, or true to sort a string array result by default ascii character order.
-    * @property { boolean } sortAscending - Optional. A flag specifying whether to sort in ascending order (default) or descending.
-    * @property { boolean } returnFirstItemOnly - Optional. Pass true to have just the first result item returned; otherwise an array containing all results is returned.
- */
-
-/**
-    * Options for selectInnerJoinOnArray function.
-    * @typedef {Object} selectInnerJoinOnArrayOptions
-    * @property {function} [storeFilterFn] Optional function to filter items in the store being queried.
-    * @property {function|Boolean|null} [transformFnOrSelectDbItemsOnly] Optional function to transform each database and matching array item before adding it to the result array. Or pass true to return just the database items. Or pass null/false to return database items merged with the matching array item.
-    * @property {function|string|Array<string>|null} [orderBy] Either a function to sort items, a string naming 1 field to sort by, an array of strings naming multiple fields to sort by, or true to sort a string array result by default ascii character order.
-    * @property {bool} [sortAscending] Optional Flag specifying whether to sort in ascending order (default) or descending.
-    * @property {Array} joinArray The array to join to.
-    * @property {string} dbField The database field name to join with arrayField.
-    * @property {string} [arrayField] The array field name to join with dbField. Ignore this param if you want to compare against array items themselves, e.g. array of int IDs.
-*/
-
-/**
-    * Options for selectLeftJoinOnArray function.
-    * @typedef {Object} selectLeftJoinOnArrayOptions
-    * @property {function} storeFilterFn Optional function to filter items in the store being queried.
-    * @property {function|boolean} transformFnOrSelectDbItemsOnly Optional function to transform each database and array before adding it to the result array. Or pass true to return just the database items. Or pass null/false to return database items merged with the matching array item.
-    * @property {function|string|array<string>} [orderBy] Either a function to sort items, a string naming 1 field to sort by, an array of strings naming multiple fields to sort by, or true to sort a string array result by default ascii character order.
-    * @property {bool} [sortAscending] Optional Flag specifying whether to sort in ascending order (default) or descending.
-    * @property {array} joinArray The array to join to.
-    * @property {string} dbField The database field name to join with arrayField.
-    * @property {string} arrayField The array field name to join with dbField.
-*/
-
-/**
-    * Options for selectLeftJoin function.
-    * @typedef {Object} selectLeftJoinOptions
-    * @property {string} leftStoreName Name of the left store.
-    * @property {function} [leftFilterFn] Optional function to filter items in the left store.
-    * @property {string} leftJoinField Name of the field in the left store's items to join to the right store's items.
-    * @property {string} rightStoreName Name of the right store.
-    * @property {function} [rightFilterFn] Optional function to filter items in the right store.
-    * @property {string} rightJoinField Name of the field in the right store's items to join to the left store's items.
-    * @property {function|boolean} transformFnOrSelectDbItemsOnly Optional function to transform each item before adding it to the result array. Or pass true to return just the left items. Or pass null/false to return the left items merged with the matching right items.
-    * @property {function|string|array<string>} [orderBy] Either a function to sort items, a string naming 1 field to sort by, an array of strings naming multiple fields to sort by, or true to sort a string array result by default ascii character order.
-    * @property {boolean} [sortAscending] Optional Flag specifying whether to sort in ascending order (default) or descending.
-*/
-
-/**
-    * Options for selectInnerJoin function.
-    * @typedef {Object} selectInnerJoinOptions
-    * @property {string} leftStoreName Name of the left store.
-    * @property {function} [leftFilterFn] Optional function to filter items in the left store.
-    * @property {string} leftJoinField Name of the field in the left store's items to join to the right store's items.
-    * @property {string} rightStoreName Name of the right store.
-    * @property {function} [rightFilterFn] Optional function to filter items in the right store.
-    * @property {string} rightJoinField Name of the field in the right store's items to join to the left store's items.
-    * @property {function|boolean} transformFnOrSelectDbItemsOnly Optional function to transform each item before adding it to the result array. Or pass true to return just the left items. Or pass null/false to return the left items merged with the matching right items.
-    * @property {function|string|array<string>} [orderBy] Either a function to sort items, a string naming 1 field to sort by, an array of strings naming multiple fields to sort by, or true to sort a string array result by default ascii character order.
-    * @property {boolean} [sortAscending] Optional Flag specifying whether to sort in ascending order (default) or descending.
-*/
-
-/**
  * Performs IndexedDB data CRUD and schema tasks.
+ * @type {indexedDbSvc}
  */
 var indexedDbSvc = (function () {
 
@@ -102,38 +39,210 @@ var indexedDbSvc = (function () {
     };
 
     /**
-     * Performs a data query on a store (table). Calls a callback function once the async operation completes.
+     * Performs a data query on a store (table). Calls a success callback function once the async operation completes, or an error callback function if an error occurs.
      * @param {string} storeName IndexedDB store (table) name to query.
      * @param {selectOptions} [options] Optional set of options for controlling the results.
-     * @param {Function} callbackFn
+     * @param {Function} successCallbackFn The callback function to pass the results to once the asynchronous IndexedDB query operation completes.
+     * @param {Function} errorCallbackFn The callback function to call if an error occurs.
      */
-    indexedDbSvc.prototype.selectWithCallback = function (storeName, options, callbackFn) {
+    indexedDbSvc.prototype.selectWithCallback = function (storeName, options, successCallbackFn, errorCallbackFn) {
 
-        this.select(storeName, options)
-            .then(function (results) {
-                callbackFn.call(null, results);
-            });
-    };
+        options = options || {};
 
-    /**
-    * Performs a data query on a store (table). Calls a callback function once the async operation completes.
-    * @param {string} storeName IndexedDB store (table) name to query.
-    * @param {ArrayLike} dbData The data to store.
-    * @param {Function} callbackFn 
-    */
-    indexedDbSvc.prototype.storeWithCallback = function (storeName, dbData, callbackFn) {
+        /** @type {selectOptions} */
+        var opts = {
+            indexName: options.indexName,
+            keyRange: options.keyRange,
+            filterFn: options.filterFn,
+            transformFn: options.transformFn,
+            orderBy: options.orderBy,
+            sortAscending: options.sortAscending,
+            returnFirstItemOnly: options.returnFirstItemOnly
+        };
 
-        this.store(storeName, dbData)
-            .then(function (qtyRowsStored) {
-                callbackFn.call(null, qtyRowsStored);
-            });
+        /** @type {IDBOpenDBRequest} */
+        var openDbRequest = indexedDB.open(_dbName);
+
+        /** @param {Event} event */
+        openDbRequest.onsuccess = function (event) {
+
+            try {
+                /** @type {IDBDatabase} */
+                var db = event.target.result;
+
+                /** @type {IDBTransaction} */
+                var trans = db.transaction(storeName, "readonly");
+
+                if (trans) {
+
+                    trans.oncomplete = function () {
+                        db.close();
+                    };
+
+                    trans.onabort = function (evt) {
+
+                        var storeName = "", keyPath = "", error = "";
+
+                        try {
+                            storeName = evt.target.source.name;
+                            keyPath = evt.target.source.keyPath;
+                            error = evt.target.error;
+                        } catch (e) {
+                        }
+
+                        var txErr = "indexedDbSvc.select transaction abort at " + storeName + "." + keyPath + ": " + error;
+
+                        db.close();
+
+                        errorCallbackFn(txErr);
+                    };
+
+                    trans.onerror = function (evt) {
+
+                        var storeName = "", keyPath = "", error = "";
+
+                        try {
+                            storeName = evt.target.source.name;
+                            keyPath = evt.target.source.keyPath;
+                            error = evt.target.error;
+                        } catch (e) {
+                        }
+
+                        var txErr = "indexedDbSvc.select transaction error at " + storeName + "." + keyPath + ": " + error;
+
+                        db.close();
+
+                        errorCallbackFn(txErr);
+                    };
+
+                    /** @type {IDBObjectStore} */
+                    var objectStore = trans.objectStore(storeName);
+
+                    if (opts.indexName) {
+                        /** @type {IDBIndex} */
+                        var index;
+
+                        try {
+                            index = objectStore.index(opts.indexName);
+                        }
+                        catch (e) {
+                        }
+                    }
+
+                    /** @type {IDBKeyRange} */
+                    var range;
+
+                    if (opts.keyRange) {
+                        try {
+                            range = IDBKeyRange.only(opts.keyRange);
+                        } catch (e) {
+                        }
+                    }
+
+                    /** @type {IDBRequest} */
+                    var cursorRequest;
+
+                    if (index && range) {
+                        cursorRequest = index.openCursor(range);
+                    }
+                    else if (index) {
+                        cursorRequest = index.openCursor();
+                    }
+                    else if (range) {
+                        cursorRequest = objectStore.openCursor(range);
+                    }
+                    else {
+                        cursorRequest = objectStore.openCursor();
+                    }
+
+                    /** @type {[]} */
+                    var resultItems = [];
+
+                    cursorRequest.onsuccess = function () {
+
+                        /** @type {IDBCursorWithValue} */
+                        var cursorWithValue = cursorRequest.result;
+
+                        if (cursorWithValue) {
+                            resultItems.push(cursorWithValue.value);
+                            cursorWithValue.continue(); // Re-triggers cursorRequest.onsuccess
+                        }
+                        else {
+
+                            db.close();
+
+                            // Apply filter
+                            if (typeof opts.filterFn === "function") {
+                                resultItems = _grep(resultItems, opts.filterFn);
+                            }
+
+                            // Apply transform to each element
+                            if (typeof opts.transformFn === "function") {
+                                var transformed;
+                                var valueOfElement;
+
+                                for (var idx = 0; idx < resultItems.length; idx++) {
+                                    valueOfElement = resultItems[idx];
+                                    transformed = opts.transformFn.call(null, valueOfElement);
+                                    resultItems[idx] = transformed;
+                                }
+                            }
+
+                            // Sort
+                            if (opts.orderBy != null) {
+                                _sortResultItems(resultItems, opts.orderBy, opts.sortAscending);
+                            }
+
+                            if (opts.returnFirstItemOnly) {
+                                // Return just the first result item, which could be null if no results
+                                var first = resultItems[0];
+                                successCallbackFn(first);
+                            }
+                            else {
+                                successCallbackFn(resultItems);
+                            }
+                        }
+                    };
+
+                    cursorRequest.onerror = function (evt) {
+
+                        db.close();
+
+                        errorCallbackFn(evt);
+                    };
+                }
+            } catch (e) {
+                var err = storeName + " store; " + e.name + "; " + e.message;
+
+                errorCallbackFn(err);
+            }
+        };
+
+        /**
+         * DB open request on-blocked handler.
+         * @param {Event} evt
+         */
+        openDbRequest.onblocked = function (evt) {
+
+            errorCallbackFn(evt);
+        };
+
+        /**
+         * DB open request on-error handler.
+         * @param {Event} evt
+         */
+        openDbRequest.onerror = function (evt) {
+
+            errorCallbackFn(evt);
+        };
+
     };
 
     /**
      * Performs a data query on a store (table). Returns a Promise which is resolved when the async operation completes.
      * @param {string} storeName IndexedDB store (table) name to query.
      * @param {selectOptions} [options] Optional set of options for controlling the results.
-     * @returns {Promise} Promise that is resolved when the async query operation completes.
+     * @returns {Promise} Promise that is resolved when the asynchronous IndexedDB query operation completes.
      */
     indexedDbSvc.prototype.select = function (storeName, options) {
 
@@ -150,7 +259,7 @@ var indexedDbSvc = (function () {
             returnFirstItemOnly: options.returnFirstItemOnly
         };
 
-        return new Promise(function (resolve, reject) {
+        return new Promise(function executor (resolveFn, rejectFn) {
 
             /** @type {IDBOpenDBRequest} */
             var openDbRequest = indexedDB.open(_dbName);
@@ -183,11 +292,11 @@ var indexedDbSvc = (function () {
                             }
 
                             var txErr = "indexedDbSvc.select transaction abort at " + storeName + "." + keyPath + ": " + error;
-                            console.error(txErr);
+                            //console.error(txErr);
 
                             db.close();
 
-                            reject(txErr);
+                            rejectFn(txErr);
                         };
 
                         trans.onerror = function (evt) {
@@ -202,11 +311,11 @@ var indexedDbSvc = (function () {
                             }
 
                             var txErr = "indexedDbSvc.select transaction error at " + storeName + "." + keyPath + ": " + error;
-                            console.error(txErr);
+                            //console.error(txErr);
 
                             db.close();
 
-                            reject(txErr);
+                            rejectFn(txErr);
                         };
 
                         /** @type {IDBObjectStore} */
@@ -249,17 +358,17 @@ var indexedDbSvc = (function () {
                             cursorRequest = objectStore.openCursor();
                         }
 
-                        /** @type {[]} */
+                        /** @type {Array} */
                         var resultItems = [];
 
                         cursorRequest.onsuccess = function () {
 
                             /** @type {IDBCursorWithValue} */
-                            var cursor = cursorRequest.result;
+                            var cursorWithValue = cursorRequest.result;
 
-                            if (cursor) {
-                                resultItems.push(cursor.value);
-                                cursor.continue(); // Re-triggers cursorRequest.onsuccess
+                            if (cursorWithValue) {
+                                resultItems.push(cursorWithValue.value);
+                                cursorWithValue.continue(); // Re-triggers cursorRequest.onsuccess
                             }
                             else {
 
@@ -290,10 +399,10 @@ var indexedDbSvc = (function () {
                                 if (opts.returnFirstItemOnly) {
                                     // Return just the first result item, which could be null if no results
                                     var first = resultItems[0];
-                                    resolve(first);
+                                    resolveFn(first);
                                 }
                                 else {
-                                    resolve(resultItems);
+                                    resolveFn(resultItems);
                                 }
                             }
                         };
@@ -301,14 +410,14 @@ var indexedDbSvc = (function () {
                         cursorRequest.onerror = function (evt) {
 
                             db.close();
-                            console.error(evt);
-                            reject(evt);
+                            //console.error(evt);
+                            rejectFn(evt);
                         };
                     }
                 } catch (e) {
                     var err = storeName + " store; " + e.name + "; " + e.message;
-                    console.error(err);
-                    reject(err);
+                    //console.error(err);
+                    rejectFn(err);
                 }
             };
 
@@ -318,8 +427,8 @@ var indexedDbSvc = (function () {
              */
             openDbRequest.onblocked = function (evt) {
 
-                console.error(evt);
-                reject(evt);
+                //console.error(evt);
+                rejectFn(evt);
             };
 
             /**
@@ -328,12 +437,17 @@ var indexedDbSvc = (function () {
              */
             openDbRequest.onerror = function (evt) {
 
-                console.error(evt);
-                reject(evt);
+                //console.error(evt);
+                rejectFn(evt);
             };
 
         });
 
+    };
+
+    indexedDbSvc.prototype.selectAsync = async function (storeName, options) {
+
+        return this.select(storeName, options);
     };
 
     /**
@@ -622,7 +736,7 @@ var indexedDbSvc = (function () {
                 })
                 .catch(function (reason) {
 
-                    console.error("indexedDbSvc.selectLeftJoin - failed " + opts.leftStoreName + " " + opts.rightStoreName);
+                    //console.error("indexedDbSvc.selectLeftJoin - failed " + opts.leftStoreName + " " + opts.rightStoreName);
                     reject(reason);
                 });
 
@@ -722,7 +836,7 @@ var indexedDbSvc = (function () {
                 })
                 .catch(function (reason) {
 
-                    console.error("indexedDbSvc.selectInnerJoin - failed " + opts.leftStoreName + " " + opts.rightStoreName);
+                    //console.error("indexedDbSvc.selectInnerJoin - failed " + opts.leftStoreName + " " + opts.rightStoreName);
                     reject(reason);
                 });
 
@@ -765,7 +879,7 @@ var indexedDbSvc = (function () {
                                 store.put(dbData[idx]);
                                 qtyRowsToStore++;
                             } catch (e) {
-                                console.error("Error putting data for " + storeName + " - " + e);
+                                //console.error("Error putting data for " + storeName + " - " + e);
                             }
                         }
                     }
@@ -784,8 +898,8 @@ var indexedDbSvc = (function () {
 
                     tx.onerror = function (evt) {
 
-                        console.error(evt);
-                        console.error(storeName);
+                        (evt);
+                        //console.error(storeName);
 
                         var storeName = "", keyPath = "", error = "";
 
@@ -796,7 +910,7 @@ var indexedDbSvc = (function () {
                         } catch (e) {
                         }
 
-                        console.error("indexedDbSvc.Store transaction error at " + storeName + " " + storeName + "." + keyPath + ": " + error);
+                        //console.error("indexedDbSvc.Store transaction error at " + storeName + " " + storeName + "." + keyPath + ": " + error);
 
                         //console.error("Tx error in Store for table " + storeName + " " + error);
 
@@ -814,29 +928,43 @@ var indexedDbSvc = (function () {
 
                         var errorMsg = _stringFormat("Store tx aborted for {0}: {1} - {2} ", storeName, errorName, evt);
 
-                        console.error(errorMsg);
+                        //console.error(errorMsg);
                         reject("Store tx aborted " + errorMsg); // Signal error
                     };
                 }
                 catch (e) {
-                    console.error("Store error for " + storeName + e);
+                    //console.error("Store error for " + storeName + e);
                     reject("Store db open exception"); // Signal error
                 }
             };
 
             openDbRequest.onblocked = function (evt) {
 
-                console.error("Store onblocked error for " + storeName + " " + evt);
+                //console.error("Store onblocked error for " + storeName + " " + evt);
                 reject("Store db open onblocked"); // Signal error
             };
 
             openDbRequest.onerror = function (evt) {
 
-                console.error("Store onerror for " + storeName + " " + evt);
+                //console.error("Store onerror for " + storeName + " " + evt);
                 reject("Store db open onerror"); // Signal error
             };
 
         });
+    };
+
+    /**
+    * Performs a data query on a store (table). Calls a callback function once the async operation completes.
+    * @param {string} storeName IndexedDB store (table) name to query.
+    * @param {ArrayLike} dbData The data to store.
+    * @param {Function} callbackFn 
+    */
+    indexedDbSvc.prototype.storeWithCallback = function (storeName, dbData, callbackFn) {
+
+        this.store(storeName, dbData)
+            .then(function (qtyRowsStored) {
+                callbackFn.call(null, qtyRowsStored);
+            });
     };
 
     /**
@@ -864,7 +992,7 @@ var indexedDbSvc = (function () {
                             resolve(qtyRowsStored);
                         })
                         .catch(function (reason) {
-                            console.error("indexedDbSvc.StoreMany - failed storing into store " + nextStoreAndData[0]);
+                            //console.error("indexedDbSvc.StoreMany - failed storing into store " + nextStoreAndData[0]);
                             reject(reason);
                         });
                 }
@@ -940,7 +1068,7 @@ var indexedDbSvc = (function () {
                             }
 
                             request.onerror = function () {
-                                console.error("Delete openCursor onerror for " + storeName + " " + evt);
+                                //console.error("Delete openCursor onerror for " + storeName + " " + evt);
                                 reject("Delete openCursor error"); // Signal error
                             };
 
@@ -949,17 +1077,17 @@ var indexedDbSvc = (function () {
                             };
 
                             tx.onerror = function (evt) {
-                                console.error("Delete tx onerror for " + storeName + " " + evt);
+                                //console.error("Delete tx onerror for " + storeName + " " + evt);
                                 reject("Delete tx error"); // Signal error
                             };
 
                             tx.onabort = function (evt) {
-                                console.error("Delete tx abort for " + storeName + " " + evt);
+                                //console.error("Delete tx abort for " + storeName + " " + evt);
                                 reject("Delete tx aborted"); // Signal error
                             };
                         }
                         catch (e) {
-                            console.error("Error in Delete for " + storeName + " - " + e);
+                            //console.error("Error in Delete for " + storeName + " - " + e);
                             reject("Error in Delete for " + storeName + " - " + e);
                         }
                         finally {
@@ -969,13 +1097,13 @@ var indexedDbSvc = (function () {
 
                     openDbRequest.onblocked = function (evt) {
 
-                        console.error("Delete openDbRequest onblocked for " + storeName + " " + evt);
+                        //console.error("Delete openDbRequest onblocked for " + storeName + " " + evt);
                         reject("Delete openDbRequest onblocked"); // Signal error
                     };
 
                     openDbRequest.onerror = function (evt) {
 
-                        console.error("Delete openDbRequest onerror for " + storeName + " " + evt);
+                        //console.error("Delete openDbRequest onerror for " + storeName + " " + evt);
                         reject("Delete openDbRequest onerror"); // Signal error
                     };
 
@@ -1022,30 +1150,30 @@ var indexedDbSvc = (function () {
                     };
 
                     tx.onerror = function (evt) {
-                        console.error("tx onerror in Truncate for " + storeName + " " + evt);
+                        //console.error("tx onerror in Truncate for " + storeName + " " + evt);
                         reject("Truncate tx error"); // Signal error
                     };
 
                     tx.onabort = function (evt) {
-                        console.error("tx onabort rrror in Truncate for " + storeName + " " + evt);
+                        //console.error("tx onabort rrror in Truncate for " + storeName + " " + evt);
                         reject("Truncate tx aborted"); // Signal error
                     };
                 }
                 catch (e) {
-                    console.error("Truncate - error truncating " + storeName + " - " + e);
+                    //console.error("Truncate - error truncating " + storeName + " - " + e);
                     reject();
                 }
             };
 
             openDbRequest.onblocked = function (evt) {
 
-                console.error("Error in Truncate, openDbRequest.onblocked for " + storeName + " " + evt);
+                //console.error("Error in Truncate, openDbRequest.onblocked for " + storeName + " " + evt);
                 reject("Truncate db open onblocked"); // Signal error
             };
 
             openDbRequest.onerror = function (evt) {
 
-                console.error("Error in Truncate, openDbRequest.onerror for " + storeName + " " + evt);
+                //console.error("Error in Truncate, openDbRequest.onerror for " + storeName + " " + evt);
                 reject("Truncate db open onerror"); // Signal error
             };
         });
@@ -1178,7 +1306,7 @@ var indexedDbSvc = (function () {
                             }
 
                             var msg = "indexedDbSvc.GetPrimaryKeyName transaction abort at " + storeName + "." + keyPath + ": " + error;
-                            console.error(msg);
+                            //console.error(msg);
 
                             db.close();
 
@@ -1200,7 +1328,7 @@ var indexedDbSvc = (function () {
 
                             var msg = "indexedDbSvc.GetPrimaryKeyName transaction error at " + storeName + "." + keyPath + ": " + error;
 
-                            console.error(msg);
+                            //console.error(msg);
 
                             reject("onerror " + msg);
                         };
@@ -1218,7 +1346,7 @@ var indexedDbSvc = (function () {
 
                     }
                 } catch (e) {
-                    console.error(storeName + " store; " + e.name + "; " + e.message);
+                    //console.error(storeName + " store; " + e.name + "; " + e.message);
 
                     reject("Error getting pk names for store " + storeName + "; " + e.name + "; " + e.message);
                 }
@@ -1230,7 +1358,7 @@ var indexedDbSvc = (function () {
              */
             openDbRequest.onblocked = function (evt) {
 
-                console.error(evt);
+                //console.error(evt);
                 reject("onblocked");
             };
 
@@ -1240,7 +1368,7 @@ var indexedDbSvc = (function () {
              */
             openDbRequest.onerror = function (evt) {
 
-                console.error(evt);
+                //console.error(evt);
                 reject("onerror");
             };
 
@@ -1275,7 +1403,7 @@ var indexedDbSvc = (function () {
 
             databasesRequest.catch(function (reason) {
 
-                console.error("DatabaseExists error for " + dbName + " " + reason);
+                //console.error("DatabaseExists error for " + dbName + " " + reason);
                 resolve(false);
             });
         });
@@ -1314,20 +1442,20 @@ var indexedDbSvc = (function () {
                 }
                 catch (e) {
                     db.close();
-                    console.error("StoreExists - error checking for " + storeName + " - " + e);
+                    //console.error("StoreExists - error checking for " + storeName + " - " + e);
                     reject("StoreExists db open onsuccess " + storeName + " - " + e);
                 }
             };
 
             openDbRequest.onblocked = function (evt) {
 
-                console.error("Error in StoreExists, openDbRequest.onblocked " + storeName + " " + evt);
+                //console.error("Error in StoreExists, openDbRequest.onblocked " + storeName + " " + evt);
                 reject("StoreExists db open onblocked"); // Signal error
             };
 
             openDbRequest.onerror = function (evt) {
 
-                console.error("Error in StoreExists, openDbRequest.onerror for " + storeName + " " + evt);
+                //console.error("Error in StoreExists, openDbRequest.onerror for " + storeName + " " + evt);
                 reject("StoreExists db open onerror"); // Signal error
             };
 
@@ -1360,20 +1488,20 @@ var indexedDbSvc = (function () {
                     db.close();
                 }
                 catch (e) {
-                    console.error("FetchAllStores - error checking for " + e);
+                    //console.error("FetchAllStores - error checking for " + e);
                     reject("FetchAllStores db open onsuccess  - " + e);
                 }
             };
 
             openDbRequest.onblocked = function (evt) {
 
-                console.error("Error in FetchAllStores, openDbRequest.onblocked " + evt);
+                //console.error("Error in FetchAllStores, openDbRequest.onblocked " + evt);
                 reject("FetchAllStores db open onblocked"); // Signal error
             };
 
             openDbRequest.onerror = function (evt) {
 
-                console.error("Error in FetchAllStores, openDbRequest.onerror " + evt);
+                //console.error("Error in FetchAllStores, openDbRequest.onerror " + evt);
                 reject("FetchAllStores db open onerror"); // Signal error
             };
         });
@@ -1387,7 +1515,7 @@ var indexedDbSvc = (function () {
             var deleteDbRequest = indexedDB.deleteDatabase(_dbName);
 
             deleteDbRequest.onblocked = function (event) {
-                console.error("blocked deleting database.");
+                //console.error("blocked deleting database.");
                 reject(event);
             };
 
@@ -1396,7 +1524,7 @@ var indexedDbSvc = (function () {
             };
 
             deleteDbRequest.onerror = function (event) {
-                console.error("Error deleting database.");
+                //console.error("Error deleting database.");
                 reject(event);
             };
 
@@ -1437,12 +1565,12 @@ var indexedDbSvc = (function () {
                 console.log("onupgradeneeded started");
 
                 db.onerror = function (event) {
-                    console.error("Error opening database " + event);
+                    //console.error("Error opening database " + event);
                     reject("Error opening database");
                 };
 
                 db.onabort = function (event) {
-                    console.error("Aborted opening database " + event);
+                    //console.error("Aborted opening database " + event);
                     reject("Database opening aborted");
                 };
 
@@ -1472,11 +1600,11 @@ var indexedDbSvc = (function () {
             };
 
             openDbRequest.onerror = function (event) {
-                console.error("error creating database - " + event.target.error.message);
+                //console.error("error creating database - " + event.target.error.message);
             };
 
             openDbRequest.onblocked = function (event) {
-                console.error("blocked creating database " + event);
+                //console.error("blocked creating database " + event);
             };
 
         });
@@ -1849,3 +1977,80 @@ var indexedDbSvc = (function () {
     return indexedDbSvc;
 
 }());
+
+/* Start JSDoc type definitions */
+
+/**
+    * Service for interacting with indexedDB.
+    * @typedef {Object} indexedDbSvc
+    * @property { string } dbName - Name of the database.
+    * @property { function(string, selectOptions, Function, Function): void } selectWithCallback Queries a store and returns the results via a callback.
+    * @property { function(string, selectOptions): Promise } select Queries a store and returns the results via a Promise.
+    * @property { function(string, selectInnerJoinOnArrayOptions): void } selectInnerJoinOnArrayWithCallback Queries a store and joins onto an array and returns the results via a callback.
+ */
+
+/**
+    * Options for select function.
+    * @typedef {Object} selectOptions
+    * @property { string } indexName - Optional. Name of index to search in.
+    * @property { IDBKeyRange } keyRange - Optional. A key range can be a single value or a range with upper and lower bounds or endpoints. If the key range has both upper and lower bounds, then it is bounded; if it has no bounds, it is unbounded. A bounded key range can either be open (the endpoints are excluded) or closed (the endpoints are included).
+    * @property { Function } filterFn - Optional. A function to filter items in the store being queried. Should be something like: function (elementOfArray[, indexInArray]) { return elementOfArray.pr_Deleted == "False"; })
+    * @property { Function } transformFn - Optional.  A function to transform each item before adding it to the result array. Pass null to return the original item. Should be something like: function (valueOfElement) { return new Genus.PriceMatrixRule(valueOfElement); }
+    * @property { Function|string|ArrayLike<string>|boolean } [orderBy] Either a function to sort items, a string naming 1 field to sort by, an array of strings naming multiple fields to sort by, or true to sort a string array result by default ascii character order.
+    * @property { boolean } sortAscending - Optional. A flag specifying whether to sort in ascending order (default) or descending.
+    * @property { boolean } returnFirstItemOnly - Optional. Pass true to have just the first result item returned; otherwise an array containing all results is returned.
+ */
+
+/**
+    * Options for selectInnerJoinOnArray function.
+    * @typedef {Object} selectInnerJoinOnArrayOptions
+    * @property {function} [storeFilterFn] Optional function to filter items in the store being queried.
+    * @property {function|Boolean|null} [transformFnOrSelectDbItemsOnly] Optional function to transform each database and matching array item before adding it to the result array. Or pass true to return just the database items. Or pass null/false to return database items merged with the matching array item.
+    * @property {function|string|Array<string>|null} [orderBy] Either a function to sort items, a string naming 1 field to sort by, an array of strings naming multiple fields to sort by, or true to sort a string array result by default ascii character order.
+    * @property {bool} [sortAscending] Optional Flag specifying whether to sort in ascending order (default) or descending.
+    * @property {Array} joinArray The array to join to.
+    * @property {string} dbField The database field name to join with arrayField.
+    * @property {string} [arrayField] The array field name to join with dbField. Ignore this param if you want to compare against array items themselves, e.g. array of int IDs.
+*/
+
+/**
+    * Options for selectLeftJoinOnArray function.
+    * @typedef {Object} selectLeftJoinOnArrayOptions
+    * @property {function} storeFilterFn Optional function to filter items in the store being queried.
+    * @property {function|boolean} transformFnOrSelectDbItemsOnly Optional function to transform each database and array before adding it to the result array. Or pass true to return just the database items. Or pass null/false to return database items merged with the matching array item.
+    * @property {function|string|array<string>} [orderBy] Either a function to sort items, a string naming 1 field to sort by, an array of strings naming multiple fields to sort by, or true to sort a string array result by default ascii character order.
+    * @property {bool} [sortAscending] Optional Flag specifying whether to sort in ascending order (default) or descending.
+    * @property {array} joinArray The array to join to.
+    * @property {string} dbField The database field name to join with arrayField.
+    * @property {string} arrayField The array field name to join with dbField.
+*/
+
+/**
+    * Options for selectLeftJoin function.
+    * @typedef {Object} selectLeftJoinOptions
+    * @property {string} leftStoreName Name of the left store.
+    * @property {function} [leftFilterFn] Optional function to filter items in the left store.
+    * @property {string} leftJoinField Name of the field in the left store's items to join to the right store's items.
+    * @property {string} rightStoreName Name of the right store.
+    * @property {function} [rightFilterFn] Optional function to filter items in the right store.
+    * @property {string} rightJoinField Name of the field in the right store's items to join to the left store's items.
+    * @property {function|boolean} transformFnOrSelectDbItemsOnly Optional function to transform each item before adding it to the result array. Or pass true to return just the left items. Or pass null/false to return the left items merged with the matching right items.
+    * @property {function|string|array<string>} [orderBy] Either a function to sort items, a string naming 1 field to sort by, an array of strings naming multiple fields to sort by, or true to sort a string array result by default ascii character order.
+    * @property {boolean} [sortAscending] Optional Flag specifying whether to sort in ascending order (default) or descending.
+*/
+
+/**
+    * Options for selectInnerJoin function.
+    * @typedef {Object} selectInnerJoinOptions
+    * @property {string} leftStoreName Name of the left store.
+    * @property {function} [leftFilterFn] Optional function to filter items in the left store.
+    * @property {string} leftJoinField Name of the field in the left store's items to join to the right store's items.
+    * @property {string} rightStoreName Name of the right store.
+    * @property {function} [rightFilterFn] Optional function to filter items in the right store.
+    * @property {string} rightJoinField Name of the field in the right store's items to join to the left store's items.
+    * @property {function|boolean} transformFnOrSelectDbItemsOnly Optional function to transform each item before adding it to the result array. Or pass true to return just the left items. Or pass null/false to return the left items merged with the matching right items.
+    * @property {function|string|array<string>} [orderBy] Either a function to sort items, a string naming 1 field to sort by, an array of strings naming multiple fields to sort by, or true to sort a string array result by default ascii character order.
+    * @property {boolean} [sortAscending] Optional Flag specifying whether to sort in ascending order (default) or descending.
+*/
+
+/* End type definitions */

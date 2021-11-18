@@ -1,8 +1,10 @@
 ﻿/// <reference path="../../lib/indexedDbSvc/indexedDbSvc.js" />
 /// <reference path="../../lib/linqjs/linqcore.js" />
+/// <reference path="../../lib/vuejs/vue.js" />
 
 /** Vue for index page  */
 var indexVue = new Vue({
+
     el: '#root',
 
     data: {
@@ -70,9 +72,9 @@ var indexVue = new Vue({
             ["Customer", [
                 { CustomerID: 1, CustomerRef: "CUST001", CustomerName: "A Test" },
                 { CustomerID: 2, CustomerRef: "CUST002", CustomerName: "B Test" },
-                { CustomerID: 3, CustomerRef: "CUST003", CustomerName: "C Test" },
-                { CustomerID: 4, CustomerRef: "CUST004", CustomerName: "D Test" },
-                { CustomerID: 5, CustomerRef: "CUST005", CustomerName: "E Test" }
+                //{ CustomerID: 3, CustomerRef: "CUST003", CustomerName: "C Test" },
+                //{ CustomerID: 4, CustomerRef: "CUST004", CustomerName: "D Test" },
+                //{ CustomerID: 5, CustomerRef: "CUST005", CustomerName: "E Test" }
             ]],
             ["Policy", [
                 { PolicyID: 1, PolicyRef: "POL001", CustomerID: 1 },
@@ -108,7 +110,8 @@ var indexVue = new Vue({
         selectedCustomer: {},
         selectedPolicy: {},
         policies: [],
-        errorMsg: null
+        errorMsg: null,
+        customerSummaryFormatted: null
     },
 
     computed: {
@@ -120,6 +123,7 @@ var indexVue = new Vue({
     // define methods under the `methods` object
     methods: {
         createDb: function () {
+
             const self = this;
 
             this.idxDbSvc.deleteDatabase()
@@ -134,7 +138,8 @@ var indexVue = new Vue({
         },
 
         deleteDb: function () {
-            var self = this;
+
+            const self = this;
 
             this.idxDbSvc.deleteDatabase()
                 .then(function (foo) {
@@ -145,9 +150,12 @@ var indexVue = new Vue({
                 });
         },
 
-        selectCustomerInfoWithCallbacks: function (customerId) {
+        /**
+         * Callback hell! 🙁
+         */
+        selectCustomerInfoWithNamedCallbacks: function (customerId) {
 
-            // Gather Customer, Policy, Claim, ClaimStatus and Fulfilment data using shed load of convoluted callback functions - callback hell!
+            // Gather Customer, Policy, Claim, ClaimStatus, Fulfilment and Supplier data using callback functions.
 
             var customerSummary = {
                 customer: {},
@@ -158,25 +166,36 @@ var indexVue = new Vue({
 
             const self = this;
 
-            this.idxDbSvc.selectWithCallback(
+            /** @type {indexedDbSvc} */
+            const idxDbSvc = this.idxDbSvc;
+
+            function errorCallback(error) {
+                debugger;
+                self.errorMsg = error.message || error;
+                console.error(error.message || error);
+            }
+
+            idxDbSvc.selectWithCallback(
                 "Customer",
-                { filterFn: (c) => c.CustomerID == customerId, returnFirstItemOnly: true },
-                customerCallback);
+                {
+                    filterFn: (c) => c.CustomerID == customerId,
+                    returnFirstItemOnly: true
+                },
+                customerCallback,
+                errorCallback
+            );
 
             function customerCallback(customer) {
 
                 customerSummary.customer = customer;
 
-                try {
-                    self.idxDbSvc.selectWithCallback(
-                        "Policy",
-                        { filterFn: (p) => p.CustomerID == customer.CustomerID },
-                        policyCallback
-                    )
-                } catch (e) {
-                    console.error(e);
-                }
-
+                idxDbSvc.selectWithCallback(
+                    "Policy",
+                    //"MissingTable",
+                    { filterFn: (p) => p.CustomerID == customer.CustomerID },
+                    policyCallback,
+                    errorCallback
+                );
             }
 
             function policyCallback(policies) {
@@ -185,11 +204,12 @@ var indexVue = new Vue({
 
                 var policyIDs = policies.map(p => p.PolicyID);
 
-                self.idxDbSvc.selectWithCallback(
+                idxDbSvc.selectWithCallback(
                     "Claim",
                     { filterFn: (c) => policyIDs.indexOf(c.PolicyID) > -1 },
-                    claimCallback
-                )
+                    claimCallback,
+                    errorCallback
+                );
             }
 
             function claimCallback(claims) {
@@ -199,23 +219,29 @@ var indexVue = new Vue({
                 /** @type {selectInnerJoinOnArrayOptions} */
                 var options = {
                     dbField: "ClaimStatusID",
-                    joinArray: customerSummary.claims,
+                    joinArray: claims,
                     arrayField: "ClaimStatusID"
                 };
 
-                self.idxDbSvc.selectInnerJoinOnArrayWithCallback("ClaimStatus", options, claimStatusCallback);
+                idxDbSvc.selectInnerJoinOnArrayWithCallback(
+                    "ClaimStatus",
+                    options,
+                    claimStatusCallback,
+                    errorCallback
+                );
             }
 
             function claimStatusCallback(claimsWithClaimStatuses) {
 
                 customerSummary.claims = claimsWithClaimStatuses;
 
-                var claimIds = customerSummary.claims.map(c => c.ClaimID);
+                var claimIds = claimsWithClaimStatuses.map(c => c.ClaimID);
 
-                self.idxDbSvc.selectWithCallback(
+                idxDbSvc.selectWithCallback(
                     "Fulfilment",
                     { filterFn: f => claimIds.indexOf(f.ClaimID) > -1 },
-                    fulfilmentCallback
+                    fulfilmentCallback,
+                    errorCallback
                 );
             }
 
@@ -226,27 +252,33 @@ var indexVue = new Vue({
                 /** @type {selectInnerJoinOnArrayOptions} */
                 var options = {
                     dbField: "SupplierID",
-                    joinArray: customerSummary.fulfilments,
+                    joinArray: fulfilments,
                     arrayField: "SupplierID"
                 };
 
-                self.idxDbSvc.selectInnerJoinOnArrayWithCallback("Supplier", options, supplierCallback);
+                idxDbSvc.selectInnerJoinOnArrayWithCallback(
+                    "Supplier",
+                    options,
+                    supplierCallback,
+                    errorCallback);
             }
 
             function supplierCallback(fulfilmentsWithSuppliers) {
 
                 customerSummary.fulfilments = fulfilmentsWithSuppliers;
 
-                var customerDataJsonString = JSON.stringify(customerSummary, null, 3);
-
-                console.log(customerDataJsonString);
+                self.customerSummaryFormatted = JSON.stringify(customerSummary, null, 3);
             }
 
         },
 
+        /**
+         * Pyramid of doom! 🙁
+
+         */
         selectCustomerInfoWithNestedCallbacks: function (customerId) {
 
-            // Gather Customer, Policy, Claim, ClaimStatus and Fulfilment data using shed load of nested callback functions - Pyramid of doom!
+            //Gather Customer, Policy, Claim, ClaimStatus, Fulfilment and Supplier data using nested callback functions.
 
             var customerSummary = {
                 customer: {},
@@ -257,26 +289,36 @@ var indexVue = new Vue({
 
             const self = this;
 
-            this.idxDbSvc.selectWithCallback(
+            /** @type {indexedDbSvc} */
+            const idxDbSvc = this.idxDbSvc;
+
+            function errorCallback(error) {
+
+                self.errorMsg = error.message || error;
+                console.error(error.message || error);
+            }
+
+            idxDbSvc.selectWithCallback(
                 "Customer",
                 { filterFn: (c) => c.CustomerID == customerId, returnFirstItemOnly: true },
-                function customerCallback(customer) {
+                function (customer) {
 
                     customerSummary.customer = customer;
 
-                    self.idxDbSvc.selectWithCallback(
+                    idxDbSvc.selectWithCallback(
                         "Policy",
+                        //"MissingTable",
                         { filterFn: (p) => p.CustomerID == customer.CustomerID },
-                        function policyCallback(policies) {
+                        function (policies) {
 
                             customerSummary.policies = policies;
 
                             var policyIDs = policies.map(p => p.PolicyID);
 
-                            self.idxDbSvc.selectWithCallback(
+                            idxDbSvc.selectWithCallback(
                                 "Claim",
                                 { filterFn: (c) => policyIDs.indexOf(c.PolicyID) > -1 },
-                                function claimCallback(claims) {
+                                function (claims) {
 
                                     customerSummary.claims = claims;
 
@@ -286,44 +328,53 @@ var indexVue = new Vue({
                                         arrayField: "ClaimStatusID"
                                     };
 
-                                    self.idxDbSvc.selectInnerJoinOnArrayWithCallback("ClaimStatus", options, function claimStatusCallback(claimsWithClaimStatuses) {
+                                    idxDbSvc.selectInnerJoinOnArrayWithCallback(
+                                        "ClaimStatus",
+                                        options,
+                                        function (claimsWithClaimStatuses) {
 
-                                        customerSummary.claims = claimsWithClaimStatuses;
+                                            customerSummary.claims = claimsWithClaimStatuses;
 
-                                        var claimIds = customerSummary.claims.map(c => c.ClaimID);
+                                            var claimIds = customerSummary.claims.map(c => c.ClaimID);
 
-                                        self.idxDbSvc.selectWithCallback(
-                                            "Fulfilment",
-                                            { filterFn: f => claimIds.indexOf(f.ClaimID) > -1 },
-                                            function fulfilmentCallback(fulfilments) {
+                                            idxDbSvc.selectWithCallback(
+                                                "Fulfilment",
+                                                { filterFn: f => claimIds.indexOf(f.ClaimID) > -1 },
+                                                function (fulfilments) {
 
-                                                customerSummary.fulfilments = fulfilments;
+                                                    customerSummary.fulfilments = fulfilments;
 
-                                                var options = {
-                                                    dbField: "SupplierID",
-                                                    joinArray: customerSummary.fulfilments,
-                                                    arrayField: "SupplierID"
-                                                };
+                                                    var options = {
+                                                        dbField: "SupplierID",
+                                                        joinArray: customerSummary.fulfilments,
+                                                        arrayField: "SupplierID"
+                                                    };
 
-                                                self.idxDbSvc.selectInnerJoinOnArrayWithCallback("Supplier", options, function supplierCallback(fulfilmentsWithSuppliers) {
+                                                    idxDbSvc.selectInnerJoinOnArrayWithCallback(
+                                                        "Supplier",
+                                                        options,
+                                                        function (fulfilmentsWithSuppliers) {
 
-                                                    customerSummary.fulfilments = fulfilmentsWithSuppliers;
+                                                            customerSummary.fulfilments = fulfilmentsWithSuppliers;
 
-                                                    var customerDataJsonString = JSON.stringify(customerSummary, null, 3);
-
-                                                    console.log(customerDataJsonString);
-                                                });
-
-                                            }
-                                        );
-                                    });
-                                }
-                            )
-                        }
-                    )
-                });
+                                                            self.customerSummaryFormatted = JSON.stringify(customerSummary, null, 3);
+                                                        },
+                                                        errorCallback);
+                                                },
+                                                errorCallback);
+                                        },
+                                        errorCallback);
+                                },
+                                errorCallback)
+                        },
+                        errorCallback)
+                },
+                errorCallback);
         },
 
+        /**
+         * Chained .then / .catch 🙂
+         */
         selectCustomerInfoWithPromises: function (customerId) {
 
             var customerSummary = {
@@ -335,36 +386,36 @@ var indexVue = new Vue({
 
             const self = this;
 
-            this.idxDbSvc.select("Customer", { filterFn: (c) => c.CustomerID == customerId, returnFirstItemOnly: true })
+            /** @type {indexedDbSvc} */
+            const idxDbSvc = this.idxDbSvc;
+
+            idxDbSvc.select("Customer", { filterFn: (c) => c.CustomerID == customerId, returnFirstItemOnly: true })
                 .then(function (customer) {
 
                     customerSummary.customer = customer;
 
-                    return self.idxDbSvc.select(
+                    return idxDbSvc.select(
                         "Policy",
+                        //"MissingTable",
                         { filterFn: (p) => p.CustomerID == customer.CustomerID }
                     );
                 })
                 .then(function (policies) {
-
+                    debugger;
                     customerSummary.policies = policies;
 
                     var policyIDs = policies.map(p => p.PolicyID);
 
-                    return self.idxDbSvc.select(
+                    return idxDbSvc.select(
                         "Claim",
                         { filterFn: (c) => policyIDs.indexOf(c.PolicyID) > -1 },
                     );
                 })
                 .then(function (claims) {
 
-                    throw "Something bad happened";
-                })
-                .then(function (claims) {
-                    debugger;
                     customerSummary.claims = claims;
 
-                    return self.idxDbSvc.selectInnerJoinOnArray(
+                    return idxDbSvc.selectInnerJoinOnArray(
                         "ClaimStatus",
                         { dbField: "ClaimStatusID", joinArray: customerSummary.claims, arrayField: "ClaimStatusID" }
                     );
@@ -375,7 +426,7 @@ var indexVue = new Vue({
 
                     var claimIds = customerSummary.claims.map(c => c.ClaimID);
 
-                    return self.idxDbSvc.select(
+                    return idxDbSvc.select(
                         "Fulfilment",
                         { filterFn: f => claimIds.indexOf(f.ClaimID) > -1 }
                     );
@@ -384,7 +435,7 @@ var indexVue = new Vue({
 
                     customerSummary.fulfilments = fulfilments;
 
-                    return self.idxDbSvc.selectInnerJoinOnArray(
+                    return idxDbSvc.selectInnerJoinOnArray(
                         "Supplier",
                         { dbField: "SupplierID", joinArray: customerSummary.fulfilments, arrayField: "SupplierID" }
                     );
@@ -393,16 +444,17 @@ var indexVue = new Vue({
 
                     customerSummary.fulfilments = fulfilmentsWithSuppliers;
 
-                    var customerDataJsonString = JSON.stringify(customerSummary, null, 3);
-
-                    console.log(customerDataJsonString);
+                    self.customerSummaryFormatted = JSON.stringify(customerSummary, null, 3);
                 })
                 .catch(function (errorMsg) {
-
+                    debugger;
                     self.errorMsg = errorMsg;
                 });
         },
 
+        /**
+         * async / await 🙂
+         */
         selectCustomerInfoWithPromisesAsync: async function (customerId) {
 
             var customerSummary = {
@@ -412,46 +464,37 @@ var indexVue = new Vue({
                 fulfilments: []
             };
 
-            const self = this;
+            //const self = this;
+
+            /** @type {indexedDbSvc} */
+            const idxDbSvc = this.idxDbSvc;
 
             try {
 
-                customerSummary.customer = await this.idxDbSvc.select("Customer", { filterFn: (c) => c.CustomerID == customerId, returnFirstItemOnly: true });
+                customerSummary.customer = await idxDbSvc.select("Customer", { filterFn: (c) => c.CustomerID == customerId, returnFirstItemOnly: true });
 
-                customerSummary.policies = await self.idxDbSvc.select("Policy", { filterFn: (p) => p.CustomerID == customerSummary.customer.CustomerID });
+                customerSummary.policies = await idxDbSvc.select("Policy", { filterFn: (p) => p.CustomerID == customerSummary.customer.CustomerID });
+                //customerSummary.policies = await idxDbSvc.select("MissingTable", { filterFn: (p) => p.CustomerID == customerSummary.customer.CustomerID });
+
+                //debugger;
 
                 var policyIDs = customerSummary.policies.map(p => p.PolicyID);
 
-                customerSummary.claims = await self.idxDbSvc.select("Claim", { filterFn: (c) => policyIDs.indexOf(c.PolicyID) > -1 });
+                customerSummary.claims = await idxDbSvc.select("Claim", { filterFn: (c) => policyIDs.indexOf(c.PolicyID) > -1 });
 
-                //throw "Something bad happened";
-
-                debugger;
-
-                customerSummary.claims = await self.idxDbSvc.selectInnerJoinOnArray(
-                    "ClaimStatus",
-                    { dbField: "ClaimStatusID", joinArray: customerSummary.claims, arrayField: "ClaimStatusID" }
-                );
+                customerSummary.claims = await idxDbSvc.selectInnerJoinOnArray("ClaimStatus", { dbField: "ClaimStatusID", joinArray: customerSummary.claims, arrayField: "ClaimStatusID" });
 
                 var claimIds = customerSummary.claims.map(c => c.ClaimID);
 
-                customerSummary.fulfilments = await self.idxDbSvc.select(
-                    "Fulfilment",
-                    { filterFn: f => claimIds.indexOf(f.ClaimID) > -1 }
-                );
+                customerSummary.fulfilments = await idxDbSvc.select("Fulfilment", { filterFn: f => claimIds.indexOf(f.ClaimID) > -1 });
 
-                customerSummary.fulfilments = await self.idxDbSvc.selectInnerJoinOnArray(
-                    "Supplier",
-                    { dbField: "SupplierID", joinArray: customerSummary.fulfilments, arrayField: "SupplierID" }
-                );
+                customerSummary.fulfilments = await idxDbSvc.selectInnerJoinOnArray("Supplier", { dbField: "SupplierID", joinArray: customerSummary.fulfilments, arrayField: "SupplierID" });
 
-                var customerDataJsonString = JSON.stringify(customerSummary, null, 3);
-
-                console.log(customerDataJsonString);
+                this.customerSummaryFormatted = JSON.stringify(customerSummary, null, 3);
 
             } catch (e) {
-                
-                self.errorMsg = e.message || e;
+                debugger;
+                this.errorMsg = e.message || e;
             }
         },
 
@@ -464,6 +507,11 @@ var indexVue = new Vue({
 
             this.selectedCustomer = {};
             this.selectedPolicy = {};
+        },
+
+        clearCustomerSummary: function () {
+
+            this.customerSummaryFormatted = null;
         },
 
         listCustomers: function () {

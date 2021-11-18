@@ -10847,3 +10847,7 @@ textarea.form-control-lg {
 }
 
 /*# sourceMappingURL=bootstrap.css.map */
+
+pre.pre-xs {
+    font-size: 0.8em;
+}

@@ -23,12 +23,12 @@
 
         <div class="row">
 
-            <div class="alert-danger" v-if="errorMsg != null">{{ errorMsg }}</div>
+            <div class="alert alert-danger" v-if="errorMsg != null">{{ errorMsg }}</div>
 
             <div class="col-2">
-                <button id="btnCreateDb" class="btn btn-sm btn-success mb-1 w-100" v-on:click="createDb" v-bind:disabled="dbCreated">Create database</button>
-                <button id="btnCustomers" class="btn btn-sm btn-secondary mb-1 w-100" v-on:click="listCustomers" :disabled="!dbCreated">List customers</button>
-                <button id="btnDeleteDb" class="btn btn-sm btn-danger mb-1 w-100" v-on:click="deleteDb" :disabled="!dbCreated">Delete database</button>
+                <button id="btnCreateDb" class="btn btn-sm btn-success mb-1 w-100" v-on:click="clearCustomerSummary(); createDb();" v-bind:disabled="dbCreated">Create database</button>
+                <button id="btnCustomers" class="btn btn-sm btn-secondary mb-1 w-100" v-on:click="clearCustomerSummary(); listCustomers();" :disabled="!dbCreated">List customers</button>
+                <button id="btnDeleteDb" class="btn btn-sm btn-danger mb-1 w-100" v-on:click="clearCustomerSummary(); deleteDb();" :disabled="!dbCreated">Delete database</button>
             </div>
 
             <div class="col-10">
@@ -36,12 +36,12 @@
                 <ul class="list-group mb-1" v-if="storeData.length > 0 || activeStoreName != null">
                     <li class="list-group-item" v-for="row in storeData">
                         <div class="row">
-                            <div class="col-sm-9">{{ row }}</div>
+                            <div class="col-sm-9"><pre>{{ row }}</pre></div>
                             <div class="col-sm-3 text-end">
-                                <button class="btn btn-xs btn-secondary mb-1" v-on:click="selectCustomerInfoWithCallbacks(row.CustomerID)">Details (callbacks)</button><br />
-                                <button class="btn btn-xs btn-secondary mb-1" v-on:click="selectCustomerInfoWithNestedCallbacks(row.CustomerID)">Details (nested callbacks / POD)</button><br />
-                                <button class="btn btn-xs btn-secondary mb-1" v-on:click="selectCustomerInfoWithPromises(row.CustomerID)">Details (chained promises)</button>
-                                <button class="btn btn-xs btn-secondary" v-on:click="selectCustomerInfoWithPromisesAsync(row.CustomerID)">Details (chained promises async)</button>
+                                <button class="btn btn-xs btn-secondary mb-1 w-100" v-on:click="clearCustomerSummary(); selectCustomerInfoWithNamedCallbacks(row.CustomerID);">Details (named callbacks / callback hell)</button><br />
+                                <button class="btn btn-xs btn-secondary mb-1 w-100" v-on:click="clearCustomerSummary(); selectCustomerInfoWithNestedCallbacks(row.CustomerID);">Details (nested callbacks / POD)</button><br />
+                                <button class="btn btn-xs btn-secondary mb-1 w-100" v-on:click="clearCustomerSummary(); selectCustomerInfoWithPromises(row.CustomerID);">Details (chained promises)</button>
+                                <button class="btn btn-xs btn-secondary w-100" v-on:click="clearCustomerSummary(); selectCustomerInfoWithPromisesAsync(row.CustomerID);">Details (async promises)</button>
                             </div>
                         </div>
                     </li>
@@ -53,6 +53,10 @@
 
                 <div>
                     <policy-store-item-editor v-if="selectedPolicy.PolicyID >= 0" v-bind:policy="selectedPolicy" />
+                </div>
+
+                <div class="text-sm-start">
+                    <pre class="pre-xs" v-if="customerSummaryFormatted != null">{{ customerSummaryFormatted }}</pre>
                 </div>
 
             </div>
